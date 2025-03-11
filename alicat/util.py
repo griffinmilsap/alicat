@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import serial
+import serial_asyncio_fast
 
 logger = logging.getLogger('alicat')
 
@@ -190,36 +191,47 @@ class TcpClient(Client):
 class SerialClient(Client):
     """Client using a directly-connected RS232 serial device."""
 
+    reader: asyncio.StreamReader
+    writer: asyncio.StreamWriter
+
     def __init__(self, address: str, baudrate: int=19200, timeout: float=.15,
                  bytesize: int = serial.EIGHTBITS,
                  stopbits: int = serial.STOPBITS_ONE,
-                 parity: str = serial.PARITY_NONE):
+                 parity: str = serial.PARITY_NONE,
+                 loop: asyncio.AbstractEventLoop | None = None):
         """Initialize serial port."""
         super().__init__(timeout)
         self.address = address
         assert isinstance(self.address, str)
+        if loop is None:
+            loop = asyncio.get_event_loop()
         self.serial_details = {'baudrate': baudrate,
                                'bytesize': bytesize,
                                'stopbits': stopbits,
                                'parity': parity,
-                               'timeout': timeout}
-        self.ser = serial.Serial(self.address, **self.serial_details)  # type: ignore [arg-type]
+                               'timeout': timeout,
+                               'loop': loop}
+        self.reader, self.writer = loop.run_until_complete(
+            serial_asyncio_fast.open_serial_connection(self.address, **self.serial_details) # type: ignore [arg-type]
+        )
 
     async def _read(self, length: int) -> str:
         """Read a fixed number of bytes from the device."""
-        return self.ser.read(length).decode()
+        return (await self.reader.read(length)).decode()
 
     async def _readline(self) -> str:
         """Read until a LF terminator."""
-        return self.ser.readline().strip().decode().replace('\x00', '')
+        return (await self.reader.readline()).strip().decode().replace('\x00', '')
 
     async def _write(self, message: str) -> None:
         """Write a message to the device."""
-        self.ser.write(message.encode() + self.eol)
+        self.writer.write(message.encode() + self.eol)
+        # await self.writer.drain() # Previous impl didn't flush stream after writes
 
     async def close(self) -> None:
         """Release resources."""
-        self.ser.close()
+        self.writer.close()
+        await self.writer.wait_closed()
 
     async def _handle_connection(self) -> None:
         self.open = True
