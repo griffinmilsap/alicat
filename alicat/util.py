@@ -212,7 +212,10 @@ class SerialClient(Client):
                                'timeout': timeout,
                                'loop': loop}
         self.reader, self.writer = loop.run_until_complete(
-            serial_asyncio_fast.open_serial_connection(self.address, **self.serial_details) # type: ignore [arg-type]
+            serial_asyncio_fast.open_serial_connection(
+                url = self.address, 
+                **self.serial_details
+            )
         )
 
     async def _read(self, length: int) -> str:
