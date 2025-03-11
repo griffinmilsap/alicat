@@ -211,12 +211,12 @@ class SerialClient(Client):
                                'parity': parity,
                                'timeout': timeout,
                                'loop': loop}
-        self.reader, self.writer = loop.run_until_complete(
+        self.reader, self.writer = asyncio.run_coroutine_threadsafe(
             serial_asyncio_fast.open_serial_connection(
                 url = self.address, 
                 **self.serial_details
-            )
-        )
+            ), loop = loop
+        ).result()
 
     async def _read(self, length: int) -> str:
         """Read a fixed number of bytes from the device."""
