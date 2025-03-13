@@ -123,6 +123,7 @@ class Client(ABC):
                 return
             try:
                 self.reader, self.writer = await asyncio.wait_for(self._connect(), timeout=0.75)
+                await self._clear()
                 self.reconnecting = False
             except (asyncio.TimeoutError, OSError):
                 if not self.reconnecting:
