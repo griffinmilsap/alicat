@@ -327,9 +327,9 @@ class FlowController(FlowMeter):
         """
         FlowMeter.__init__(self, address, unit, **kwargs)
         self.control_point = None
-        async def _init_control_point() -> None:
-            self.control_point = await self._get_control_point()
-        self._init_task = asyncio.create_task(_init_control_point())
+        # async def _init_control_point() -> None:
+        #     self.control_point = await self._get_control_point()
+        # self._init_task = asyncio.create_task(_init_control_point())
 
     async def __aenter__(self, *args: Any) -> FlowController:
         """Provide async enter to context manager."""
@@ -341,8 +341,8 @@ class FlowController(FlowMeter):
         (1) Ensure _init_task is called once before the first request
         (2) Call _test_controller_open() before any request
         """
-        if 'R122' not in command:
-            await self._init_task
+        # if 'R122' not in command:
+        #     await self._init_task
         self._test_controller_open()
         return await self.hw._write_and_read(command)
 
