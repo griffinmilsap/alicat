@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from abc import ABC, abstractmethod
 from typing import Any
 
-from abc import ABC, abstractmethod
-
 import serial
-import serial_asyncio_fast
+import serial_asyncio_fast  # type: ignore
 
 logger = logging.getLogger('alicat')
 
@@ -62,18 +61,15 @@ class Client(ABC):
         As industrial devices are commonly unplugged, this has been expanded to
         handle recovering from disconnects.
         """
-        await self._handle_connection()
         self.writer.write(message.encode() + self.eol)
 
     async def _read(self, length: int) -> str:
         """Read a fixed number of bytes from the device."""
-        await self._handle_connection()
         response = await self.reader.read(length)
         return response.decode().strip()
 
     async def _readline(self) -> str:
         """Read until a LF terminator."""
-        await self._handle_connection()
         response = await self.reader.readuntil(self.eol)
         return response.decode().strip().replace('\x00', '')
 
@@ -121,16 +117,17 @@ class Client(ABC):
             return None
 
     async def _handle_connection(self) -> None:
-        """Automatically maintain TCP connection."""
-        if self.open:
-            return
-        try:
-            await asyncio.wait_for(self._connect(), timeout=0.75)
-            self.reconnecting = False
-        except (asyncio.TimeoutError, OSError):
-            if not self.reconnecting:
-                logger.error(f'Connecting to {self.address} timed out.')
-            self.reconnecting = True
+        """Automatically maintain connection."""
+        async with self.lock:
+            if self.open:
+                return
+            try:
+                self.reader, self.writer = await asyncio.wait_for(self._connect(), timeout=0.75)
+                self.reconnecting = False
+            except (asyncio.TimeoutError, OSError):
+                if not self.reconnecting:
+                    logger.error(f'Connecting to {self.address} timed out.')
+                self.reconnecting = True
 
     async def close(self) -> None:
         """Close the connection."""
@@ -140,8 +137,8 @@ class Client(ABC):
         self.open = False
 
     @abstractmethod
-    async def _connect(self) -> None:
-        ...    
+    async def _connect(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+        ...
 
 
 class TcpClient(Client):
@@ -161,11 +158,12 @@ class TcpClient(Client):
         except ValueError as e:
             raise ValueError('address must be hostname:port') from e
 
-    async def _connect(self) -> None:
+    async def _connect(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         """Asynchronously open a TCP connection with the server."""
         await self.close()
-        self.reader, self.writer = await asyncio.open_connection(self.address, self.port)
+        reader, writer = await asyncio.open_connection(self.address, self.port)
         self.open = True
+        return reader, writer
 
 
 class SerialClient(Client):
@@ -176,9 +174,9 @@ class SerialClient(Client):
     stopbits: int
     parity: str
 
-    def __init__(self, 
-                 address: str, 
-                 baudrate: int = 19200, 
+    def __init__(self,
+                 address: str,
+                 baudrate: int = 19200,
                  timeout: float = 0.15,
                  bytesize: int = serial.EIGHTBITS,
                  stopbits: int = serial.STOPBITS_ONE,
@@ -193,12 +191,12 @@ class SerialClient(Client):
         self.stopbits = stopbits
         self.parity = parity
 
-    async def _connect(self) -> None:
+    async def _connect(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         """Asynchronously open a TCP connection with the server."""
         await self.close()
 
-        self.reader, self.writer = await serial_asyncio_fast.open_serial_connection(
-            url = self.address, 
+        reader, writer = await serial_asyncio_fast.open_serial_connection(
+            url = self.address,
             baudrate = self.baudrate,
             bytesize = self.bytesize,
             stopbits = self.stopbits,
@@ -207,6 +205,8 @@ class SerialClient(Client):
         )
 
         self.open = True
+
+        return reader, writer
 
 
 def _is_float(msg: Any) -> bool:
