@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
-
 from abc import ABC, abstractmethod
+from typing import Any
 
 import serial
 import serial_asyncio_fast
@@ -141,7 +140,7 @@ class Client(ABC):
 
     @abstractmethod
     async def _connect(self) -> None:
-        ...    
+        ...
 
 
 class TcpClient(Client):
@@ -176,9 +175,9 @@ class SerialClient(Client):
     stopbits: int
     parity: str
 
-    def __init__(self, 
-                 address: str, 
-                 baudrate: int = 19200, 
+    def __init__(self,
+                 address: str,
+                 baudrate: int = 19200,
                  timeout: float = 0.15,
                  bytesize: int = serial.EIGHTBITS,
                  stopbits: int = serial.STOPBITS_ONE,
@@ -198,7 +197,7 @@ class SerialClient(Client):
         await self.close()
 
         self.reader, self.writer = await serial_asyncio_fast.open_serial_connection(
-            url = self.address, 
+            url = self.address,
             baudrate = self.baudrate,
             bytesize = self.bytesize,
             stopbits = self.stopbits,
