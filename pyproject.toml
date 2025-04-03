@@ -8,7 +8,7 @@ version = "0.8.0"
 description="Python driver for Alicat mass flow controllers."
 dependencies = [
   "pyserial",
-  "pyserial-asyncio-fast"
+  "pyserial-asyncio-fast>=0.16",
 ]
 authors = [
   {name = "Pat Fuller", email = "patrickfuller@gmail.com" },
@@ -38,7 +38,7 @@ test = [
   'pytest-cov>=6,<7',
   'pytest-asyncio>=0.23.5',
   'pytest-xdist>=3,<4',
-  'ruff==0.9.9',
+  'ruff==0.11.2',
   'types-pyserial'
 ]
 
@@ -89,3 +89,4 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 addopts = "--cov=alicat"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"

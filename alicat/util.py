@@ -169,6 +169,7 @@ class SerialClient(Client):
                  bytesize: int = serial.EIGHTBITS,
                  stopbits: int = serial.STOPBITS_ONE,
                  parity: str = serial.PARITY_NONE):
+
         super().__init__(timeout)
 
         self.address = address
