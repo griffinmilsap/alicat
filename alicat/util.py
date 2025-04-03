@@ -43,18 +43,6 @@ class Client(ABC):
         self.eol = b'\r'
         self.lock = asyncio.Lock()
 
-    async def __aenter__(self) -> Client:
-        """Provide async entrance to context manager.
-
-        Contrasting synchronous access, this will connect on initialization.
-        """
-        await self._handle_connection()
-        return self
-
-    async def __aexit__(self, *args: Any) -> None:
-        """Provide async exit to context manager."""
-        await self.close()
-
     async def _write(self, message: str) -> None:
         """Write a command and do not expect a response.
 
@@ -95,7 +83,7 @@ class Client(ABC):
         """Clear the reader stream when it has been corrupted from multiple connections."""
         logger.warning("Multiple connections detected; clearing reader stream.")
         try:
-            junk = await asyncio.wait_for(self._read(100), timeout=0.5)
+            junk = await asyncio.wait_for(self._read(100), timeout=self.timeout)
             logger.warning(junk)
         except TimeoutError:
             pass
@@ -105,7 +93,7 @@ class Client(ABC):
         try:
             await self._write(command)
             future = self._readline()
-            result = await asyncio.wait_for(future, timeout=0.75)
+            result = await asyncio.wait_for(future, timeout=self.timeout)
             self.timeouts = 0
             return result
         except (asyncio.TimeoutError, TypeError, OSError):
@@ -118,11 +106,11 @@ class Client(ABC):
 
     async def _handle_connection(self) -> None:
         """Automatically maintain connection."""
+        if self.open:
+            return
         async with self.lock:
-            if self.open:
-                return
             try:
-                self.reader, self.writer = await asyncio.wait_for(self._connect(), timeout=0.75)
+                self.reader, self.writer = await asyncio.wait_for(self._connect(), timeout=self.timeout)
                 self.reconnecting = False
             except (asyncio.TimeoutError, OSError):
                 if not self.reconnecting:
@@ -177,7 +165,7 @@ class SerialClient(Client):
     def __init__(self,
                  address: str,
                  baudrate: int = 19200,
-                 timeout: float = 0.15,
+                 timeout: float = 10.0,
                  bytesize: int = serial.EIGHTBITS,
                  stopbits: int = serial.STOPBITS_ONE,
                  parity: str = serial.PARITY_NONE):
