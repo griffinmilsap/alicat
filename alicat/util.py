@@ -14,6 +14,7 @@ from typing import Any
 import serial
 import serial_asyncio_fast  # type: ignore
 
+
 logger = logging.getLogger('alicat')
 
 
@@ -169,6 +170,7 @@ class SerialClient(Client):
                  bytesize: int = serial.EIGHTBITS,
                  stopbits: int = serial.STOPBITS_ONE,
                  parity: str = serial.PARITY_NONE):
+
         super().__init__(timeout)
 
         self.address = address
