@@ -6,6 +6,7 @@ Copyright (C) 2023 NuMat Technologies
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any, ClassVar
 
 from .util import Client, SerialClient, TcpClient, _is_float
@@ -326,9 +327,9 @@ class FlowController(FlowMeter):
         """
         FlowMeter.__init__(self, address, unit, **kwargs)
         self.control_point = None
-        # async def _init_control_point() -> None:
-        #     self.control_point = await self._get_control_point()
-        # self._init_task = asyncio.create_task(_init_control_point())
+        async def _init_control_point() -> None:
+            self.control_point = await self._get_control_point()
+        self._init_task = asyncio.create_task(_init_control_point())
 
     async def __aenter__(self, *args: Any) -> FlowController:
         """Provide async enter to context manager."""
