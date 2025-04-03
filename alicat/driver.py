@@ -6,7 +6,6 @@ Copyright (C) 2023 NuMat Technologies
 """
 from __future__ import annotations
 
-import asyncio
 from typing import Any, ClassVar
 
 from .util import Client, SerialClient, TcpClient, _is_float
