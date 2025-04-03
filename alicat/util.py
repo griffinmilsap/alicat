@@ -14,7 +14,6 @@ from typing import Any
 import serial
 import serial_asyncio_fast  # type: ignore
 
-
 logger = logging.getLogger('alicat')
 
 
